@@ -1,0 +1,74 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+repositories {
+    jcenter()
+}
+
+version = '1.002'
+sourceCompatibility = JavaVersion.VERSION_1_8 
+targetCompatibility = JavaVersion.VERSION_1_8
+ 
+mainClassName = 'Main'
+ext.appdir = file(System.env.SAM_PROGRAMS+'/tsv/bin')
+
+dependencies {
+  compile 'org.xerial:sqlite-jdbc:3.7.2'
+  compile files('myutils.jar') 
+}
+
+task deleteJars {
+  delete fileTree(appdir) {
+    include '*.jar'
+  }
+}
+
+
+task install(type: Copy, dependsOn:[installDist, deleteJars]) {
+  def libdir = file(new File(installDist.destinationDir, 'lib')) 
+  from libdir
+  into appdir
+  
+  doLast {
+     new File(appdir, 'run.cmd').text = """
+  @echo off
+  setlocal
+  
+  ${versionText()}
+  
+  set SELF_DIR=%~dp0..
+  set session_file=%SELF_DIR%\\session.properties
+  
+  java %JAVA_OPTS% -cp \"%~dp0${String.join(';%~dp0', libdir.list())}\" ${mainClassName} %*
+  
+  """.stripIndent()
+  } 
+}
+
+run {
+  environment('SELF_DIR', appdir.parent)
+  environment('session_file', new File(appdir.parent, 'session.properties'))
+  args = ["dummy.tsv"]
+}
+
+
+def versionText() {
+  if(!version && version == 'unspecified') return '';
+  return """
+  SET APP_VERSION=${version}
+  if [%1]==[-v] (
+    echo version: %APP_VERSION%
+    goto:eof
+  )
+  if [%1]==[--version] (
+    echo version: %APP_VERSION%
+    goto:eof
+  )
+  """;    
+}
+
+jar {
+  exclude '*.fxgraph'
+}
+
+defaultTasks 'install'
