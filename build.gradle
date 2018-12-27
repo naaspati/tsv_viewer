@@ -5,7 +5,7 @@ repositories {
     jcenter()
 }
 
-version = '1.002'
+version = '1.5'
 sourceCompatibility = JavaVersion.VERSION_1_8 
 targetCompatibility = JavaVersion.VERSION_1_8
  
@@ -48,7 +48,8 @@ task install(type: Copy, dependsOn:[installDist, deleteJars]) {
 run {
   environment('SELF_DIR', appdir.parent)
   environment('session_file', new File(appdir.parent, 'session.properties'))
-  args = ["dummy.tsv"]
+  // args = ["dummy.tsv"]
+  args = [/D:\Core Files\Emulator\dolphin\Manga\Data\Converter\java_temp\ConvertTaskWrap.tsv/]
 }
 
 
