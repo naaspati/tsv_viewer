@@ -8,7 +8,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import sam.fx.helpers.FxHBox;
-import sam.myutils.MyUtilsCheck;
+import sam.myutils.Checker;
 import sam.tsv.viewer.tab2.TableCol.TableCell2;
 
 public class Editor extends BorderPane {
@@ -48,7 +48,7 @@ public class Editor extends BorderPane {
 	void start(TableCell2 cell) {
 		this.cell = cell;
 		String s = cell.getItem();
-		content.setText(MyUtilsCheck.isEmpty(s) ? "" : s);
+		content.setText(Checker.isEmpty(s) ? "" : s);
 		onstart.run();
 		Platform.runLater(() -> content.requestFocus());
 	}

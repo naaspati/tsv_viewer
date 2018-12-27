@@ -7,9 +7,10 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import javafx.application.Application;
-import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
@@ -19,18 +20,16 @@ import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.Window;
-import sam.config.SessionHelper;
+import sam.config.Session;
 import sam.fx.alert.FxAlert;
 import sam.fx.helpers.FxBindings;
 import sam.fx.popup.FxPopupShop;
-import sam.reference.WeakAndLazy;
-import sam.tsv.viewer.tab2.Editor;
 import sam.tsv.viewer.tab2.Tab2;
 
-public class App extends Application implements SessionHelper {
+public class App extends Application {
 	public static void main(String[] args) {
 		launch(args);
 	}
@@ -41,12 +40,16 @@ public class App extends Application implements SessionHelper {
 	public static App getInstance() {
 		return instance;
 	}
+	
+	private final Session session = Session.global(); 
+	
 	private static App instance;
 	private static Stage stage;
 	private final TabPane tabPane = new TabPane();
 	private final BorderPane root = new BorderPane(tabPane);
 	private final ReadOnlyObjectProperty<Tab> currentTab = tabPane.getSelectionModel().selectedItemProperty();
 	private final ObjectBinding<Path> currentFile = FxBindings.map(currentTab, t -> t == null ? null : ((Tab2)t).getPath());
+	private final Text meta = new Text();
 
 	public boolean loadFromClipboard() {
 		Clipboard cb = Clipboard.getSystemClipboard();
@@ -94,15 +97,20 @@ public class App extends Application implements SessionHelper {
 		App.instance = this;
 
 		root.setTop(new BorderPane(new Buttons(currentTab), new MenuBar2(currentTab, currentFile,this::addTab), null, null, null));
+		
+		currentTab.addListener(i -> currentTabChange());
+		root.setBottom(meta);
+		meta.setStyle("-fx-font-size:0.9em;-fx-font-family:Consolas");
+		BorderPane.setMargin(meta, new Insets(2));
 
 		Scene scene = new Scene(root);
 		stage.setScene(scene);
 
-		stage.setHeight(sessionGet("window.height", Screen.getPrimary().getVisualBounds().getHeight(), Double::parseDouble));
-		stage.setWidth(sessionGet("window.width", Screen.getPrimary().getVisualBounds().getWidth()/2, Double::parseDouble));
+		stage.setHeight(session.getProperty("window.height", Screen.getPrimary().getVisualBounds().getHeight(), Double::parseDouble));
+		stage.setWidth(session.getProperty("window.width", Screen.getPrimary().getVisualBounds().getWidth()/2, Double::parseDouble));
 
-		stage.setX(sessionGet("window.x", 0, Integer::parseInt));
-		stage.setY(sessionGet("window.y", 0, Integer::parseInt));
+		stage.setX(session.getProperty("window.x", 0, Integer::parseInt));
+		stage.setY(session.getProperty("window.y", 0, Integer::parseInt));
 
 		stage.setTitle("TSV Viewer");
 		stage.getIcons().add(new Image("icon.png"));
@@ -116,6 +124,15 @@ public class App extends Application implements SessionHelper {
 			addTab(Paths.get(s));
 	}
 
+	private void currentTabChange() {
+		Tab2 t = (Tab2) currentTab.get();
+		if(t == null) {
+			meta.textProperty().unbind();
+			meta.setText(null);
+			return;
+		}
+		meta.textProperty().bind(Bindings.concat("rows: ", t.rowsCountProperty()));
+	}
 	private void addTab(Path p) {
 		if(Files.notExists(p)) {
 			FxAlert.showErrorDialog(p, "File not Found", null);
@@ -129,15 +146,6 @@ public class App extends Application implements SessionHelper {
 			return;
 		}
 		tabPane.getTabs().add(t);
-	}
-
-	private WeakAndLazy<Editor> editorw = new WeakAndLazy<>(Editor::new);
-
-	public Editor editor() {
-		Editor editor = editorw.get();
-		editor.onstart(() -> root.setBottom(editor));
-		editor.onClose(() -> root.setBottom(null));
-		return editor;
 	}
 
 	public void close() {
@@ -171,7 +179,7 @@ public class App extends Application implements SessionHelper {
 				}
 			}
 		}
-		Platform.exit();
+		System.exit(0);
 	}
 
 }

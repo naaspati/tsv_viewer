@@ -1,13 +1,9 @@
 package sam.tsv.viewer;
 
-import static javafx.scene.input.KeyCode.C;
-import static javafx.scene.input.KeyCode.DELETE;
 import static javafx.scene.input.KeyCode.F5;
 import static javafx.scene.input.KeyCode.O;
 import static javafx.scene.input.KeyCode.Q;
 import static javafx.scene.input.KeyCode.S;
-import static javafx.scene.input.KeyCode.V;
-import static javafx.scene.input.KeyCombination.CONTROL_DOWN;
 import static javafx.scene.input.KeyCombination.SHIFT_DOWN;
 import static javafx.scene.input.KeyCombination.SHORTCUT_DOWN;
 import static sam.fx.helpers.FxMenu.combination;
@@ -18,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -121,25 +116,11 @@ public class MenuBar2 extends MenuBar {
 
 		Menu crpMenu = new Menu("Column Resize Policy", null, constrainedCrpCMI, unconstrainedCrpCMI);
 		Menu viewMenu = new Menu("_View", null, selectionMenu, crpMenu, enableMenuCMI, enableEditingCMI, enableCellSelectionCMI);
-
-		/**
-		 * 		CheckMenuItem toggleFirstRowIsHeaderMenu = new CheckMenuItem("First Row Is Header");
-		toggleFirstRowIsHeaderMenu.selectedProperty().bindBidirectional(tsvModel.firstLineIsHeaderProperty());
-
-		Menu tableMenu = new Menu("_Table", null, toggleFirstRowIsHeaderMenu);
-		 */
-		Menu editMenu = new Menu("Edit", null, 
-				menuitem("_Copy", combination(C, CONTROL_DOWN), e -> tab().copySelected()),
-				menuitem("_Paste", combination(V, CONTROL_DOWN), e -> tab().pasteClipboard()),
-				menuitem("Delete Cell", combination(DELETE), e -> tab().deleteSelectedCells(), Bindings.createBooleanBinding(() -> tab() == null || !tab().isCellSelectionEnabled(), currentTab)),
-				menuitem("Delete Row", combination(DELETE, CONTROL_DOWN), e -> tab().removeSeletedRows())
-				);
 		
-		editMenu.disableProperty().bind(currentTabNull);
 		viewMenu.disableProperty().bind(currentTabNull);
 
 		setUseSystemMenuBar(true);
-		getMenus().addAll(fileMenu, editMenu, viewMenu);//TODO , tableMenu);
+		getMenus().addAll(fileMenu, viewMenu);//TODO , tableMenu);
 	}
 	private void selectionMode(ObservableValue<? extends Toggle> p, Toggle o, Toggle n) {
 		Tab2 t = tab();
@@ -154,6 +135,8 @@ public class MenuBar2 extends MenuBar {
 			t.setSelectionMode(n == singleSelectionCMI ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
 	}
 	private void resizePolicy(ObservableValue<? extends Toggle> p, Toggle o, Toggle n) {
+		if(10 < System.currentTimeMillis())
+			return;
 		Tab2 t = tab();
 		if(t == null) return;
 		

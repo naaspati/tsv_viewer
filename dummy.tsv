@@ -4,8 +4,8 @@ manga_id	manga_name	mangafox	mangahere
 507932	Bokutachi Wa Benkyou Ga Dekinai	http://fanfox.net/manga/bokutachi_wa_benkyou_ga_dekinai	http://www.mangahere.cc/manga/bokutachi_wa_benkyou_ga_dekinai
 510822	Chichi Chichi	http://fanfox.net/manga/chichi_chichi	http://www.mangahere.cc/manga/chichi_chichi
 305076	Death March Kara Hajimaru Isekai Kyousoukyoku	http://fanfox.net/manga/death_march_kara_hajimaru_isekai_kyousoukyoku	http://www.mangahere.cc/manga/death_march_kara_hajimaru_isekai_kyousoukyoku
-279406	Domestic Na Kanojo	http://fanfox.net/manga/domestic_na_kanojo	http://www.mangahere.cc/manga/domestic_na_kanojo
-271879	Doupo Cangqiong Manhua	http://fanfox.net/manga/doupo_cangqiong	http://www.mangahere.cc/manga/dou_po_cang_qiong
+279406	loaders	http://fanfox.net/manga/domestic_na_kanojo	http://www.mangahere.cc/manga/domestic_na_kanojo
+271879	\r\ndef versionText() {\r\n  if(!version && version == 'unspecified') return '';\r\n  String s = "echo version: %APP_VERSION% (${java.time.LocalDateTime.now()}^)"\r\n  return """\r\n  SET APP_VERSION=${version}\r\n  if [%1]==[-v] (\r\n    ${s}\r\n    goto:eof\r\n  )\r\n  if [%1]==[--version] (\r\n    ${s}\r\n    goto:eof\r\n  )\r\n  """;    \r\n}\r\n\r\njar {\r\n  exclude '*.fxgraph'\r\n}\r\n\r\ndefaultTasks 'install'\r\n	http://fanfox.net/manga/doupo_cangqiong	http://www.mangahere.cc/manga/dou_po_cang_qiong
 166252	Dragons Rioting	http://fanfox.net/manga/dragons_rioting	http://www.mangahere.cc/manga/dragons_rioting
 111321	Flying Witch (Ishizuka Chihiro)	http://fanfox.net/manga/flying_witch_ishizuka_chihiro	http://www.mangahere.cc/manga/flying_witch_ishizuka_chihiro
 372888	From Maid To Mother	http://fanfox.net/manga/from_maid_to_mother	http://www.mangahere.cc/manga/from_maid_to_mother
@@ -30,10 +30,8 @@ manga_id	manga_name	mangafox	mangahere
 372311	Maken No Daydreamer	http://fanfox.net/manga/maken_no_daydreamer	http://www.mangahere.cc/manga/maken_no_daydreamer
 581184	Makikomarete Isekai Teni Suru Yatsu Wa, Taitei Cheat	http://fanfox.net/manga/makikomarete_isekai_teni_suru_yatsu_wa_taitei_cheat	http://www.mangahere.cc/manga/makikomarete_isekai_teni_suru_yatsu_wa_taitei_cheat
 228638	Nanatsu No Taizai	http://fanfox.net/manga/nanatsu_no_taizai	http://www.mangahere.cc/manga/nanatsu_no_taizai
-268551	Ojojojo	http://fanfox.net/manga/ojojojo	http://www.mangahere.cc/manga/ojojojo
-173716	Okusama Ga Seito Kaichou!	http://fanfox.net/manga/okusama_ga_seito_kaichou	http://www.mangahere.cc/manga/okusama_ga_seito_kaichou
+173716		http://fanfox.net/manga/okusama_ga_seito_kaichou	http://www.mangahere.cc/manga/okusama_ga_seito_kaichou
 50767	Okusan	http://fanfox.net/manga/okusan	http://www.mangahere.cc/manga/okusan
-541259	Osake Wa Fuufu Ni Natte Kara	http://fanfox.net/manga/osake_wa_fuufu_ni_natte_kara	http://www.mangahere.cc/manga/osake_wa_fuufu_ni_natte_kara
 514747	Parallel Paradise	http://fanfox.net/manga/parallel_paradise	http://www.mangahere.cc/manga/parallel_paradise
 581707	Peter Grill To Kenja No Jikan	http://fanfox.net/manga/peter_grill_to_kenja_no_jikan	http://www.mangahere.cc/manga/peter_grill_to_kenja_no_jikan
 586808	Please Don'T Bully Me, Nagatoro	http://fanfox.net/manga/please_don_t_bully_me_nagatoro	http://www.mangahere.cc/manga/please_don_t_bully_me_nagatoro

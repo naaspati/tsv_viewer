@@ -1,142 +1,120 @@
 package sam.tsv.viewer.tab2;
 
+import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Objects;
+import java.util.function.Function;
 
-import javafx.beans.property.SimpleStringProperty;
-import javafx.event.Event;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import sam.tsv.Row;
-import sam.tsv.viewer.App;
+import sam.tsv.viewer.tab2.TableCol.RowCol;
 
-public class TableCol extends TableColumn<Row, String> {
-	public static enum ColEdit {
-		PASTE, DELETE
-	}
+public class TableCol extends TableColumn<Row, RowCol> {
+	private final Runnable onModified;
+	private boolean modified;
+	final int column_count, col_index;
+	private final IdentityHashMap<Row, Loader> rows2 = new IdentityHashMap<>(); 
 
-	final int index;
-	private int editCount;
-
-	public TableCol(String title, int index) {
+	public TableCol(String title, int index, Runnable onModified, int column_count) {
 		super(title);
-		this.index = index;
+		this.onModified = onModified;
+		this.col_index = index;
+		this.column_count  = column_count;
 
 		setCellFactory(column -> new TableCell2());
-		setCellValueFactory(cdata -> new ObservableRow(cdata.getValue(), index));
+		Function<Row, Loader> computer = Loader::new;  
+		setCellValueFactory(cdata -> rows2.computeIfAbsent(cdata.getValue(), computer).get(index));
 	}
-
-	private String paste;
-	private ColEdit edit;
-
-	public void fastEdit(ColEdit edit, int row, String data) {
-		this.edit = edit;
-		switch (edit) {
-			case DELETE:
-				break;
-			case PASTE:
-				this.paste = Objects.requireNonNull(paste);
-				break;
-		}
-		getTableView().edit(row, this);
-	}
-
-	public class ObservableRow extends SimpleStringProperty {
-		private final Row row;
-
-		public ObservableRow(Row row, int index) {
-			super(row.get(index));
+	
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	private class Loader {
+		final Row row;
+		SimpleObjectProperty[] cols;
+		
+		public Loader(Row row) {
 			this.row = row;
 		}
-		@Override
-		public void set(String newValue) {
-			if(!Objects.equals(getValue(), newValue)) {
-				editCount++;
-				row.set(index, newValue);
-			}
-			super.set(newValue);
+		public SimpleObjectProperty<RowCol> get(int index) {
+			if(cols == null)
+				cols = new SimpleObjectProperty[column_count];
+			if(index >= cols.length)
+				cols = Arrays.copyOf(cols, index+1);
+			
+			SimpleObjectProperty o = cols[index];
+			if(o != null)
+				return o;
+			
+			return cols[index] = new SimpleObjectProperty(new RowCol(row));
 		}
+		
 	}
-	public class TableCell2 extends TableCell<Row, String> {
-		private Editor editor;
-		@Override
-		public void startEdit() {
-			if (! isEditable()
-					|| ! getTableView().isEditable()
-					|| ! getTableColumn().isEditable()) {
-				return;
-			}
+	
 
-			super.startEdit();
-
-			if(isEditing()) {
-
-				if(edit != null) {
-					switch (edit) {
-						case DELETE:
-							this.commitEdit(null);
-							break;
-						case PASTE:
-							this.commitEdit(paste);
-							break;
-					}
-					paste = null;
-					edit = null;
-					return;
-				} else {
-					editor = App.getInstance().editor();
-					editor.start(this);	
-				}
-			}
+	public static class TableCell2 extends TableCell<Row, RowCol> {
+		{
+			setWrapText(true);
 		}
-		@SuppressWarnings({ "unchecked", "rawtypes" })
+
 		@Override
-		public void commitEdit(String newValue) {
-			if (!isEditing()) return;
-
-			final TableView<Row> table = getTableView();
-			if (table != null) {
-				// Inform the TableView of the edit being ready to be committed.
-				CellEditEvent editEvent = new CellEditEvent(
-						table,
-						table.getEditingCell(),
-						TableColumn.editCommitEvent(),
-						newValue
-						);
-
-				Event.fireEvent(getTableColumn(), editEvent);
-			}
-
-			super.commitEdit(newValue);
-			updateItem(newValue, false);
-
-			if (table != null) {
-				table.edit(-1, null);
-				table.requestFocus();
-			}
-			if(editor != null) {
-				editor.close();
-				editor = null;
-			}
-		}
-		@Override
-		public void cancelEdit() {
-			super.cancelEdit();
-			editor.close();
-			editor = null;
-		}
-		@Override
-		protected void updateItem(String item, boolean empty) {
+		protected void updateItem(RowCol item, boolean empty) {
 			super.updateItem(item, empty);
-			setText(empty ? null : item);
+			
+			if(empty || item == null) {
+				setText(null);
+				setUserData(null);
+			} else {
+				item.setView(this);
+				String s = item.get();
+				int n = s == null ? -1 : s.indexOf('\n');
+				if(n >= 0) {
+					if(s.length() > 1 && s.charAt(n - 1) == '\r')
+						n--;
+					s = s.substring(0, n).concat("...");
+				}
+				setText(s);	
+			}
 		}
-
-
 	}
-	public boolean isModified() {
-		return editCount != 0;
+	
+	class RowCol {
+		public final Row row;
+		private TableCell2 view;
+		
+		public RowCol(Row row) {
+			this.row = row;
+		}
+		public String get() {
+			return row.get(col_index);
+		}
+		public void set(String value) {
+			if(Objects.equals(value, get()))
+				return;
+			
+			row.set(col_index, value);
+			if(view != null && view.getUserData() == this)
+				view.setText(value);
+			
+			modified();
+		}
+		
+		private void setView(TableCell2 view) {
+			if(this.view != null && this.view.getUserData() == this)
+				this.view.setUserData(null);
+			
+			this.view = view;
+			this.view.setUserData(this);
+		}
 	}
-	public void clearModified() {
-		editCount = 0;
+	
+	public void modified() {
+		if(modified)
+			return;
+		modified = true;
+		onModified.run();
+	}
+	void clearModified() {
+		modified = false;
 	}
 }

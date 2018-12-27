@@ -1,5 +1,3 @@
-import java.util.Arrays;
-
 import javafx.application.Application;
 import sam.tsv.viewer.App;
 

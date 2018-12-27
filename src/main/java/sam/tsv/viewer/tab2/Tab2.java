@@ -10,6 +10,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.IntegerBinding;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.collections.ObservableList;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tab;
@@ -20,48 +24,129 @@ import javafx.scene.control.TableView.ResizeFeatures;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import sam.fx.alert.FxAlert;
+import sam.fx.clipboard.FxClipboard;
 import sam.fx.popup.FxPopupShop;
 import sam.tsv.Row;
 import sam.tsv.Tsv;
-import sam.tsv.viewer.tab2.TableCol.ColEdit;
+import sam.tsv.viewer.Editor;
+import sam.tsv.viewer.tab2.TableCol.RowCol;
 
 public class Tab2 extends Tab {
 	private final TableView<Row> table = new TableView<>();
 	private final TableViewSelectionModel<Row> selectionModel = table.getSelectionModel();
 	private final ObservableList<TableColumn<Row, ?>> columns = table.getColumns(); 
 	private Tsv tsv;
-	private int modCount;
-	
+
+	private ReadOnlyBooleanWrapper modifiedb = new ReadOnlyBooleanWrapper();
+	//private ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
+
 	private static int counter = 1;
 
 	public Tab2(Path file) throws IOException {
 		table.setEditable(true);
 		table.getSelectionModel().setCellSelectionEnabled(true);
+		table.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
+			if(e.isControlDown()) {
+				switch (e.getCode()) {
+					case V:
+						pasteAction();
+						e.consume();
+						return;
+					case C:
+						copySelected();
+						e.consume();
+						return;
+					case DELETE:
+						removeSeletedRows();
+						e.consume();
+						return;
+					default:
+						break;
+				}	
+			}
+
+			switch (e.getCode()) {
+				case DELETE:
+					clearSelectedCell();
+					e.consume();
+					return;
+				case ENTER:
+					edit();
+					e.consume();
+					return;
+				default:
+					break;
+			}
+		});
+		table.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+			if(e.getClickCount() == 2)
+				edit();
+		});
 		load(file);
 		setContent(table);
 	}
+
+	private void edit() {
+		Optional<RowCol> c = firstSelectedCell();
+		if(!c.isPresent() ) {
+			FxPopupShop.showHidePopup("nothing selected", 1500);
+			return;
+		}
+		RowCol r = c.get();
+		String s = Editor.getInstance().get(r.get());
+		if(s != null)
+			r.set(s);
+	}
+	private void clearSelectedCell() {
+		selectionModel.getSelectedCells()
+		.forEach(e -> rowCol(e).set(null));
+	}
+	private Optional<RowCol> firstSelectedCell() {
+		return Optional.of(selectionModel.getSelectedCells())
+				.filter(e -> !e.isEmpty())
+				.map(e -> e.get(0))
+				.map(this::rowCol);
+	}
+	public void pasteAction() {
+		firstSelectedCell()
+		.ifPresent(e -> {
+			String s = FxClipboard.getString();
+			if(s == null)
+				FxPopupShop.showHidePopup("no data in clipboard", 1500);
+			else
+				((RowCol)e).set(s);
+		});
+	}
+
+	private final Runnable modified_listener = () -> modifiedb.set(true);
+
 	private void columnsInit() {
+		modifiedb.set(false);
 		columns.clear();
+
 		String[] columnNames = tsv.getColumnNames();
-		
-		for (int i = 0; i < columnNames.length; i++) 
-			columns.add(new TableCol(columnNames[i], i));
-		
+		int len = columnNames.length;
+
+		for (int i = 0; i < len; i++) 
+			columns.add(new TableCol(columnNames[i], i, modified_listener, len));
+
 		setName();
 		Platform.runLater(() -> table.refresh());
 	}
-	
+
 	private String altname;
-	private void setName() {
+	public void setName() {
 		Path  p = tsv.getPath();
 		String name ;
 		if(p == null) 
 			name = (altname = altname != null ? altname :  "New "+(counter++));
 		else
 			name = p.getFileName().toString();
-		
+
 		setText(name); 
 	}
 	public Path getPath() {
@@ -80,8 +165,8 @@ public class Tab2 extends Tab {
 		clearModified();
 	}
 	private void clearModified() {
-		modCount = 0;
 		columns.forEach(t -> ((TableCol)t).clearModified());
+		Platform.runLater(() -> modifiedb.set(false));
 	}
 	public void removeSeletedRows() {
 		Optional.of(selectionModel.getSelectedItems())
@@ -90,35 +175,8 @@ public class Tab2 extends Tab {
 		.ifPresent(list -> {
 			selectionModel.clearSelection();
 			table.getItems().removeAll(list);
-			modCount++;	
+			modifiedb.set(true);	
 		});
-	}
-	
-	@SuppressWarnings("rawtypes")
-	public void pasteClipboard() {
-		Clipboard c = Clipboard.getSystemClipboard();
-		if(!c.hasString()) {
-			FxPopupShop.showHidePopup("clipboard doesn't have text data", 2000);
-			return;
-		}
-		if(selectionModel.isCellSelectionEnabled()) {
-			List<TablePosition> list = selectionModel.getSelectedCells();
-			if(list.isEmpty())
-				return;
-			if(list.size() != 1) {
-				FxPopupShop.showHidePopup("paste failed\nmultiple cell selected", 2000);
-				return;
-			}
-
-			int n = list.get(0).getRow();
-			TableCol col = (TableCol) list.get(0).getTableColumn();
-			col.fastEdit(ColEdit.PASTE, n, c.getString());
-		}
-	}
-	public void deleteSelectedCells() {
-		for (@SuppressWarnings("rawtypes") TablePosition tp : selectionModel.getSelectedCells()){
-			((TableCol) tp.getTableColumn()).fastEdit(ColEdit.DELETE, tp.getRow(), null);
-		} 
 	}
 	@SuppressWarnings("rawtypes")
 	public void copySelected() {
@@ -127,18 +185,16 @@ public class Tab2 extends Tab {
 			if(list.isEmpty())
 				return;
 			if(list.size() == 1) {
-				int n = list.get(0).getRow();
-				TableCol col = (TableCol) list.get(0).getTableColumn();
-				copyToClipboard(col.getCellData(n));
+				copyToClipboard(rowCol(list.get(0)).get());
 				return;
 			}
-			
+
 			Map<Integer, List<Integer>> map = 
 					selectionModel.getSelectedCells().stream()
 					.collect(Collectors.groupingBy(TablePosition::getRow, Collectors.mapping(TablePosition::getColumn, Collectors.toList())));
-			
+
 			String[][] strs = new String[map.size()][map.keySet().stream().mapToInt(i -> table.getItems().get(i).size()).max().getAsInt()];
-			
+
 			int index[] = {0};
 			map.forEach((rowIndex, columns) -> {
 				String[] str = strs[index[0]++];
@@ -147,14 +203,14 @@ public class Tab2 extends Tab {
 					str[i] = row.get(i);
 			});
 			boolean[] nulls = new boolean[strs[0].length];
-			
+
 			for (String[] s : strs) {
 				for (int i = 0; i < s.length; i++)
 					nulls[i] = nulls[i] || s[i] != null;  
 			}
-			
+
 			StringBuilder sb = new StringBuilder();
-			
+
 			for (String[] s : strs) {
 				for (int i = 0; i < s.length; i++) {
 					if(nulls[i])
@@ -166,28 +222,30 @@ public class Tab2 extends Tab {
 			}
 			if(sb.length() > 0 && sb.charAt(sb.length() - 1)  == '\n')
 				sb.setLength(sb.length() - 1);
-			
+
 			copyToClipboard(sb.toString());
 		}
 		else {
 			copyToClipboard(selectionModel.getSelectedItems()
-			.stream()
-			.reduce(new StringBuilder(), (sb, r) -> r.join("\t", "", sb).append('\n'), StringBuilder::append).toString());
+					.stream()
+					.reduce(new StringBuilder(), (sb, r) -> r.join("\t", "", sb).append('\n'), StringBuilder::append).toString());
 		}
 	}
-	public static void copyToClipboard(String data) {
-    	ClipboardContent cc = new ClipboardContent();
-    	cc.putString(data);
-    	if(Clipboard.getSystemClipboard().setContent(cc))
-    	FxPopupShop.showHidePopup("copied", 1500);
-    }
+	private RowCol rowCol(@SuppressWarnings("rawtypes") TablePosition t) {
+		return ((TableCol) t.getTableColumn()).getCellData(t.getRow());
+	}
+	private static void copyToClipboard(String data) {
+		ClipboardContent cc = new ClipboardContent();
+		cc.putString(data);
+		if(Clipboard.getSystemClipboard().setContent(cc))
+			FxPopupShop.showHidePopup("copied", 1500);
+	}
 	private void load(Path file) throws IOException {
 		if(Files.notExists(file))
 			throw new FileNotFoundException(file.toString());
-		
+
 		table.getItems().clear();
 		this.tsv = Tsv.builder().rowStore(table.getItems()).parse(file);
-		this.modCount = 0;
 		columnsInit();
 	}
 	public void reload() {
@@ -223,21 +281,32 @@ public class Tab2 extends Tab {
 	public Callback<ResizeFeatures, Boolean> getResizePolicy(){
 		return table.getColumnResizePolicy();
 	}
-	
+
 	public SelectionMode getSelectionMode() {
 		return selectionModel.getSelectionMode();
 	}
 	public void setSelectionMode(SelectionMode mode) {
 		selectionModel.setSelectionMode(mode);
 	}
-	public boolean isModified() {
-		return modCount != 0 || columns.stream().anyMatch(t -> ((TableCol)t).isModified());
+	public ReadOnlyBooleanProperty modifiedProperty() {
+		return modifiedb.getReadOnlyProperty();
 	}
 	public void addRow() {
 		tsv.addRow(tsv.rowBuilder().build());
 		table.getSelectionModel().selectLast();
 		table.scrollTo(table.getItems().size() - 1);
 		table.getFocusModel().focus(table.getItems().size() - 1, columns.get(0));
-		modCount++;
+		modifiedb.set(true);
+	}
+
+	public boolean isModified() {
+		return modifiedb.get();
+	}
+	public int rowCount() {
+		return tsv.size();
+	}
+
+	public IntegerBinding rowsCountProperty() {
+		return Bindings.size(table.getItems());
 	}
 }

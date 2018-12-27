@@ -1,0 +1,37 @@
+package none
+import javafx.scene.Scene
+import javafx.stage.Stage
+import javafx.scene.layout.BorderPane
+import javafx.scene.control.Button
+import javafx.scene.layout.HBox
+import javafx.scene.control.TextArea
+import javafx.geometry.Insets
+import javafx.scene.text.Text
+import javafx.scene.layout.Pane
+
+dynamic component Editor {
+	Stage {
+		scene: Scene {
+			root : BorderPane {
+				style : "-fx-background-color:white",
+				top : HBox {
+					padding : Insets {topRightBottomLeft:10},
+					spacing : 10, 
+					alignment : "CENTER_RIGHT",
+					Button { text : "Import", onAction : controllermethod importAction},
+					Button { text : "Export", onAction : controllermethod exportAction},
+					Button { text : "Clear", onAction : controllermethod clearAction}
+				},
+				center : TextArea id content {static margin : Insets {left : 5, right : 5}},
+				bottom : HBox {
+					padding : Insets {topRightBottomLeft:10},
+					spacing : 10, 
+					alignment : "CENTER_RIGHT",
+					Text id meta,
+					Pane {maxWidth : const Double#MAX_VALUE, static hgrow : "ALWAYS"}, 
+					Button {text : "Apply", onAction : controllermethod applyAction}
+				} 
+			}
+		}
+	}
+}
