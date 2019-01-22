@@ -6,6 +6,7 @@ import java.io.IOException;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
@@ -57,7 +58,10 @@ public class Editor {
 		stage.initModality(Modality.APPLICATION_MODAL);
 		stage.initOwner(App.getStage());
 		stage.setTitle("Editor");
-		stage.getScene().addEventFilter(KeyEvent.KEY_RELEASED, e -> stage.hide());
+		stage.getScene().addEventFilter(KeyEvent.KEY_RELEASED, e -> {
+			if(e.getCode() == KeyCode.ESCAPE)
+				stage.hide();
+		});
 		meta.textProperty().bind(FxBindings.map(content.textProperty(), t -> "chars: ".concat(Integer.toString(t == null ? 0 : t.length()))));
 	}
 	

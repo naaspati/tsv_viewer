@@ -18,8 +18,11 @@ dependencies {
 }
 
 task deleteJars {
-  delete fileTree(appdir) {
-    include '*.jar'
+  doLast {
+     file(appdir).listFiles().each({
+       if(it.name.endsWith('.jar'))
+         it.delete();
+     });
   }
 }
 
@@ -30,7 +33,7 @@ task install(type: Copy, dependsOn:[installDist, deleteJars]) {
   into appdir
   
   doLast {
-     new File(appdir, 'run.cmd').text = """
+     new File(appdir, 'tsv.cmd').text = """
   @echo off
   setlocal
   
